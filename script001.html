@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Drawing</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
+</head>
+<body>
+    <script>
+        let R, r1, r2, r3, qprev, pace, delta, deltaMax;
+
+        let batch = 10;
+
+        let curveDrawing;
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            R = min(width, height) / 2;
+            curveDrawing = createGraphics(width, height);
+            curveDrawing.translate(width / 2, height / 2);
+            curveDrawing.strokeWeight(2);
+            generate();
+        }
+
+        function mousePressed() {
+            if (delta < deltaMax) delta = deltaMax;
+            else generate();
+        }
+
+        let teeth1, teeth2;
+
+        function generate() {
+            teeth1 = floor(random(80, 200));
+            teeth2 = floor(random(0.2, 0.8) * teeth1);
+            let lcm = teeth1 * teeth2 / gcd(teeth1, teeth2);
+            let fullTurns = lcm / teeth1;
+            
+            r1 = R * 0.8;
+            r2 = r1 * teeth2 / teeth1;
+            r3 = r2 * random(0.5, 1);
+            
+            deltaMax = r1 * TAU * fullTurns;
+            
+            delta = 0;
+            let { q } = twoCircles(r1, r2, r3, delta);
+            pace = r1 * TAU / 360;
+            qprev = q;
+            curveDrawing.clear();
+        }
+
+        function twoCircles(r1, r2, r3, delta) {
+            const perim1 = r1 * TAU;
+            const perim2 = r2 * TAU;
+            const ang1 = (delta % perim1) / r1;
+            const ang2 = (delta % perim2) / r2;
+            const p = createVector(r1, 0).rotate(ang1);
+            const c = p.copy().setMag(r1 - r2);
+            const q = c.copy().add(createVector(r3, 0).rotate(ang1 - ang2));
+            return { p, c, q };
+        }
+
+        function gcd(a, b) {
+            while (a !== b) {
+                if (a > b) {
+                    a -= b;
+                } else {
+                    b -= a;
+                }
+            }
+            return a;
+        }
+
+        function draw() {
+            background(220);
+            textSize(20);
+            textAlign(CENTER);
+            let completed = (delta / deltaMax) * 100;
+            if (delta >= deltaMax) {
+                text("Click for \nanother", 100, 50);
+                image(curveDrawing, 0, 0);
+                return;
+            }
+            text(`${completed.toFixed(1)} % \ncomplete\n(click to stop)`, 100, 50);
+            batch = floor(map(abs(50 - completed) ** 2, 50 ** 2, 0, 5, 50));
+            for (let i = 0; i < batch; i++) {
+                delta += pace;
+                let { q } = twoCircles(r1, r2, r3, delta);
+                curveDrawing.line(qprev.x, qprev.y, q.x, q.y);
+                qprev = q;
+            }
+            image(curveDrawing, 0, 0);
+            translate(width / 2, height / 2);
+            noFill();
+            let { p, c, q } = twoCircles(r1, r2, r3, delta);
+            circle(0, 0, r1 * 2);
+            fill(255, 40);
+            circle(c.x, c.y, r2 * 2);
+            fill('black');
+            circle(p.x, p.y, 5);
+            circle(q.x, q.y, 5);
+        }
+    </script>
+</body>
+</html>
